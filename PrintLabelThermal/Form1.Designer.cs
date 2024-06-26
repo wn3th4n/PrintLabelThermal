@@ -40,7 +40,7 @@ namespace PrintLabelThermal
             // 
             // btnPrint
             // 
-            this.btnPrint.Location = new System.Drawing.Point(254, 509);
+            this.btnPrint.Location = new System.Drawing.Point(424, 514);
             this.btnPrint.Name = "btnPrint";
             this.btnPrint.Size = new System.Drawing.Size(160, 41);
             this.btnPrint.TabIndex = 0;
@@ -51,7 +51,7 @@ namespace PrintLabelThermal
             // printPreviewControl
             // 
             this.printPreviewControl.BackColor = System.Drawing.SystemColors.Control;
-            this.printPreviewControl.Location = new System.Drawing.Point(433, 7);
+            this.printPreviewControl.Location = new System.Drawing.Point(875, 13);
             this.printPreviewControl.Name = "printPreviewControl";
             this.printPreviewControl.Size = new System.Drawing.Size(536, 543);
             this.printPreviewControl.TabIndex = 1;
@@ -59,7 +59,7 @@ namespace PrintLabelThermal
             // pageSizeComboBox
             // 
             this.pageSizeComboBox.FormattingEnabled = true;
-            this.pageSizeComboBox.Location = new System.Drawing.Point(93, 520);
+            this.pageSizeComboBox.Location = new System.Drawing.Point(263, 525);
             this.pageSizeComboBox.Name = "pageSizeComboBox";
             this.pageSizeComboBox.Size = new System.Drawing.Size(155, 21);
             this.pageSizeComboBox.TabIndex = 3;
@@ -67,7 +67,7 @@ namespace PrintLabelThermal
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(12, 523);
+            this.label1.Location = new System.Drawing.Point(182, 528);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(78, 13);
             this.label1.TabIndex = 4;
@@ -78,18 +78,18 @@ namespace PrintLabelThermal
             this.dataGridView.AllowUserToAddRows = false;
             this.dataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dataGridView.GridColor = System.Drawing.SystemColors.Control;
-            this.dataGridView.Location = new System.Drawing.Point(13, 13);
-            this.dataGridView.Name = "dataGridView";
-            this.dataGridView.Size = new System.Drawing.Size(401, 490);
-            this.dataGridView.TabIndex = 5;
+            this.dataGridView.Location = new System.Drawing.Point(13, 12);
             this.dataGridView.MultiSelect = false;
+            this.dataGridView.Name = "dataGridView";
+            this.dataGridView.Size = new System.Drawing.Size(855, 490);
+            this.dataGridView.TabIndex = 5;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.ClientSize = new System.Drawing.Size(981, 568);
+            this.ClientSize = new System.Drawing.Size(1413, 568);
             this.Controls.Add(this.dataGridView);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.pageSizeComboBox);

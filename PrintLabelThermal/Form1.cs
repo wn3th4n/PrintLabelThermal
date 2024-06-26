@@ -1,39 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Globalization;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Drawing;
 using System.Drawing.Printing;
 using QRCoder;
 using System.IO;
 using Newtonsoft.Json;
-using System.Collections.Generic;
 
 namespace PrintLabelThermal
 {
     public partial class Form1 : Form
     {
+
+        #region khai báo biến
         private PrintDocument printDocument;
         private PrintPreviewDialog printPreviewDialog;
         private PrintPreviewDialog printPreview = new PrintPreviewDialog();
 
-        private const float CM_TO_INCH = 0.393701f;  // Chuyển đổi từ cm sang inch
-
-        private const string CONFIG_FILE_PATH = "data\\config.ini";
-
         private List<Order> orders;
         private List<Page> pages;
-
         private Order selectedOrder;
         private Page selectedPage;
 
-      
+
+        private const float CM_TO_INCH = 0.393701f;  // Chuyển đổi từ cm sang inch
+       
+        private const string CONFIG_FILE_PATH = "data\\config.ini";
+        #endregion
+
+
         public Form1()
         {
             InitializeComponent();
@@ -70,15 +66,12 @@ namespace PrintLabelThermal
         }
         private void LoadOrders()
         {
-            //đọc dữ liệu từ file json
             string baseDirectory = AppDomain.CurrentDomain.BaseDirectory + "\\data";
             string filePath = Path.Combine(baseDirectory, "data.json");
             orders = LoadDataFromJson<Order>(filePath);
-
         }
         private void LoadPageSize()
         {
-            //đọc dữ liệu từ file json
             string baseDirectory = AppDomain.CurrentDomain.BaseDirectory + "\\data";
             string filePath = Path.Combine(baseDirectory, "pages.json");
             pages = LoadDataFromJson<Page>(Path.Combine(baseDirectory, filePath));
@@ -89,31 +82,49 @@ namespace PrintLabelThermal
             // Configure orderDataGridView
             dataGridView.AutoGenerateColumns = false;
             dataGridView.Columns.Add("IdColumn", "ID");
-            dataGridView.Columns.Add("NameColumn", "Name");
-            dataGridView.Columns.Add("TimeOrderColumn", "Time Order");
+            dataGridView.Columns.Add("DateColumn", "Date");
+            dataGridView.Columns.Add("OrdersColumn", "Orders");
+            dataGridView.Columns.Add("NoteColumn", "Note");
+            dataGridView.Columns.Add("TotalPriceColumn", "Total Price");
 
             // Populate orderDataGridView
             foreach (var order in orders)
             {
-                dataGridView.Rows.Add(order.OrderID, order.OrderName, order.Date);
+                dataGridView.Rows.Add(order.OrderID, order.Date, string.Join(", ", order.Orders), order.Note, order.TotalPrice);
             }
+
+            // Select the first row by default
+            if (dataGridView.Rows.Count > 0)
+            {
+                dataGridView.CurrentCell = dataGridView.Rows[0].Cells[0];
+                dataGridView.Rows[0].Selected = true;
+
+                // Trigger the cell click event to load the first order
+                DataGridViewCellEventArgs args = new DataGridViewCellEventArgs(0, 0);
+                dataGridView_CellClick(this.dataGridView, args);
+            }
+
 
             // Handle cell click event for order selection
             dataGridView.CellClick += new DataGridViewCellEventHandler(dataGridView_CellClick);
 
             // Calculate column widths
             int totalWidth = dataGridView.Width;
-            int idColumnWidth = totalWidth * 50 / 400; 
-            int nameColumnWidth = totalWidth * 200 / 400; 
-            int timeOrderColumnWidth = totalWidth * 100 / 400;
+            int idColumnWidth = totalWidth * 50 / totalWidth;
+            int dateColumnWidth = totalWidth * 100 / totalWidth;
+            int ordersColumnWidth = totalWidth * 300 / totalWidth;
+            int noteColumnWidth = totalWidth * 300 / totalWidth;
+            int totalPriceColumnWidth = totalWidth * 60 / totalWidth;
 
             // Set column widths
-            this.dataGridView.Columns["IdColumn"].Width = idColumnWidth;
-            this.dataGridView.Columns["NameColumn"].Width = nameColumnWidth;
-            this.dataGridView.Columns["TimeOrderColumn"].Width = timeOrderColumnWidth;
+            dataGridView.Columns["IdColumn"].Width = idColumnWidth;
+            dataGridView.Columns["DateColumn"].Width = dateColumnWidth;
+            dataGridView.Columns["OrdersColumn"].Width = ordersColumnWidth;
+            dataGridView.Columns["NoteColumn"].Width = noteColumnWidth;
+            dataGridView.Columns["TotalPriceColumn"].Width = totalPriceColumnWidth;
 
-            //set row style
-            this.dataGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            // Set row style
+            dataGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         }
         private void InitializePageSizeComboBox()
         {
@@ -140,15 +151,9 @@ namespace PrintLabelThermal
                 }
             }
         }
-
-    
-
-
         #endregion
 
-
         #region handle button
-
         private void btnPrint_Click(object sender, EventArgs e)
         {
             //printPreview.ShowDialog();
@@ -198,7 +203,6 @@ namespace PrintLabelThermal
         }
         #endregion
 
-
         #region print 
         private void PrintOrderPage(object sender, PrintPageEventArgs e)
         {
@@ -214,8 +218,9 @@ namespace PrintLabelThermal
                 float startX = 5f;   // Starting X position
                 float startY = 5f;   // Starting Y position
 
-                // Print order details
-                string orderDetails = $"{selectedOrder.OrderID}\nDate: {selectedOrder.Date}\nOrder: {selectedOrder.OrderName}\nQuantity: {selectedOrder.Quantity}\nPrice: {selectedOrder.Price}";
+                // Print order details 
+                //!bug
+                string orderDetails = $"{selectedOrder.OrderID}\nDate: {selectedOrder.Date}\nOrder: {selectedOrder.Orders.ToString()}\nQuantity: {5}\nPrice: {selectedOrder.TotalPrice}";
                 Font font = new Font("Arial", 7);
                 SizeF textSize = graphics.MeasureString(orderDetails, font);
                 float textX = startX;
@@ -245,7 +250,8 @@ namespace PrintLabelThermal
                 float startY = 5f;   // Starting Y position
 
                 // Print order details
-                string orderDetails = $"{selectedOrder.OrderID}\nDate: {selectedOrder.Date}\nOrder: {selectedOrder.OrderName}\nQuantity: {selectedOrder.Quantity}\nPrice: {selectedOrder.Price}";
+                //!bug
+                string orderDetails = $"{selectedOrder.OrderID}\nDate: {selectedOrder.Date}\nOrder: {selectedOrder.Orders.ToString()}\nQuantity: {5}\nPrice: {selectedOrder.TotalPrice}";
                 Font font = new Font("Arial", 7);
                 SizeF textSize = graphics.MeasureString(orderDetails, font);
                 float textX = startX;
@@ -301,7 +307,7 @@ namespace PrintLabelThermal
                     e.Graphics.DrawLine(pen, new Point(10, (int)lineY), new Point((int)(20 + lineWidth), (int)lineY));
                 }
                 //orderName
-                string orderName = $"{selectedOrder.OrderName}";
+                string orderName = $"{selectedOrder.Orders.ToString()}";
                 Font nameFont = new Font("Arial", 9);
                 SizeF nameSize = graphics.MeasureString(orderName, nameFont);
                 float nameX = startX + 5f;
@@ -309,7 +315,8 @@ namespace PrintLabelThermal
                 graphics.DrawString(orderName, nameFont, Brushes.Black, nameX, nameY);
 
                 // quanlity
-                string quanlity = $"{selectedOrder.Quantity}";
+                //!bug
+                string quanlity = $"{1}";
                 Font quanlityFont = new Font("Arial", 9);
                 SizeF quanSize = graphics.MeasureString(quanlity, quanlityFont);
 
@@ -322,7 +329,19 @@ namespace PrintLabelThermal
                 using (Pen pen = new Pen(Color.Black, 0.1f))
                 {
                     e.Graphics.DrawLine(pen, new Point(10, (int)lineY2), new Point((int)(20 + lineWidth), (int)lineY2));
-                }
+                }  
+                
+                
+                // Generate and print QR code
+                string qrData = $"{selectedOrder.OrderID} {selectedOrder.Orders.ToString()} {selectedOrder.Date}";
+                QRCodeGenerator qrGenerator = new QRCodeGenerator();
+                QRCodeData qrCodeData = qrGenerator.CreateQrCode(qrData, QRCodeGenerator.ECCLevel.Q);
+                QRCode qrCode = new QRCode(qrCodeData);
+                Bitmap qrCodeImage = qrCode.GetGraphic(20);
+                float qrCodeSize = 12f; // QR code size relative to page size
+                float qrCodeX = pageW - 10f - qrCodeSize;  // Center horizontally
+                float qrCodeY = pageH - 13f;  // 5mm from bottom margin
+                graphics.DrawImage(qrCodeImage, qrCodeX, qrCodeY, qrCodeSize, qrCodeSize);
                 return;
 
             }
@@ -331,8 +350,7 @@ namespace PrintLabelThermal
         }
         #endregion
 
-
-        #region extenstion
+        #region extenstions
         private string ReadConfigValue(string filePath, string key)
         {
             // Example method to read configuration value from config.ini
@@ -406,11 +424,11 @@ namespace PrintLabelThermal
             return timeString; // Nếu không thể phân tích thời gian, trả về chuỗi gốc
         }
 
-
-
-
         #endregion
 
-     
+  
+
+
+        
     }
 }
