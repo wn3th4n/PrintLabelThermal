@@ -7,6 +7,8 @@ using System.Drawing.Printing;
 using QRCoder;
 using System.IO;
 using Newtonsoft.Json;
+using System.Text;
+using System.Runtime.InteropServices;
 
 namespace PrintLabelThermal
 {
@@ -14,6 +16,9 @@ namespace PrintLabelThermal
     {
 
         #region khai báo biến
+        private const float CM_TO_INCH = 0.393701f;  // Chuyển đổi từ cm sang inch
+        private const string CONFIG_FILE_PATH = "data\\config.ini";
+
         private PrintDocument printDocument;
         private PrintPreviewDialog printPreviewDialog;
         private PrintPreviewDialog printPreview = new PrintPreviewDialog();
@@ -24,11 +29,7 @@ namespace PrintLabelThermal
         private Page selectedPage;
 
 
-        private const float CM_TO_INCH = 0.393701f;  // Chuyển đổi từ cm sang inch
-       
-        private const string CONFIG_FILE_PATH = "data\\config.ini";
         #endregion
-
 
         public Form1()
         {
@@ -49,14 +50,10 @@ namespace PrintLabelThermal
 
 
             // Set paper size
-            PaperSize paperSize = new PaperSize("3x5",
-                (int)0,
-                (int)0);
+            PaperSize paperSize = new PaperSize("customPaper",0,0);
 
             printDocument.DefaultPageSettings.Landscape = false;
-
             printDocument.DefaultPageSettings.PaperSize = paperSize;
-            // Set landscape orientation
 
             printPreviewControl.Document = printDocument;
             printPreviewControl.Zoom = 1.5; // Điều chỉnh mức phóng to cho xem trước tốt hơn (tùy chọn)
@@ -84,13 +81,17 @@ namespace PrintLabelThermal
             dataGridView.Columns.Add("IdColumn", "ID");
             dataGridView.Columns.Add("DateColumn", "Date");
             dataGridView.Columns.Add("OrdersColumn", "Orders");
-            dataGridView.Columns.Add("NoteColumn", "Note");
+            dataGridView.Columns.Add("NotesColumn", "Notes");
             dataGridView.Columns.Add("TotalPriceColumn", "Total Price");
 
             // Populate orderDataGridView
             foreach (var order in orders)
             {
-                dataGridView.Rows.Add(order.OrderID, order.Date, string.Join(", ", order.Orders), order.Note, order.TotalPrice);
+                dataGridView.Rows.Add(order.OrderID, 
+                    order.Date,
+                    order.Orders != null && order.Orders.Length > 0 ? (order.Orders.Length > 1 ? string.Join(", ", order.Orders) : order.Orders[0]) : "",
+                    order.Notes != null && order.Notes.Length > 0 ? (order.Notes.Length > 1 ? string.Join(", ", order.Notes) : (string.IsNullOrEmpty(order.Notes[0]) ? "" : order.Notes[0])) : "",
+                    order.TotalPrice);
             }
 
             // Select the first row by default
@@ -113,14 +114,14 @@ namespace PrintLabelThermal
             int idColumnWidth = totalWidth * 50 / totalWidth;
             int dateColumnWidth = totalWidth * 100 / totalWidth;
             int ordersColumnWidth = totalWidth * 300 / totalWidth;
-            int noteColumnWidth = totalWidth * 300 / totalWidth;
+            int notesColumnWidth = totalWidth * 300 / totalWidth;
             int totalPriceColumnWidth = totalWidth * 60 / totalWidth;
 
             // Set column widths
             dataGridView.Columns["IdColumn"].Width = idColumnWidth;
             dataGridView.Columns["DateColumn"].Width = dateColumnWidth;
             dataGridView.Columns["OrdersColumn"].Width = ordersColumnWidth;
-            dataGridView.Columns["NoteColumn"].Width = noteColumnWidth;
+            dataGridView.Columns["NotesColumn"].Width = notesColumnWidth;
             dataGridView.Columns["TotalPriceColumn"].Width = totalPriceColumnWidth;
 
             // Set row style
@@ -209,45 +210,164 @@ namespace PrintLabelThermal
             if (selectedOrder == null) return;
             
             string sz = selectedPage.PageSizeName;
-
-            if(sz.Contains("50x30mm"))
+            
+            if (sz.Contains("50x30mm"))
             {
                 Graphics graphics = e.Graphics;
-                graphics.PageUnit = GraphicsUnit.Millimeter; // Set unit to millimeter
+                graphics.PageUnit = GraphicsUnit.Millimeter; 
 
-                float startX = 5f;   // Starting X position
-                float startY = 5f;   // Starting Y position
+                float sX = 3f;   // Starting X position
+                float sY = 3f;   // Starting Y position
 
-                // Print order details 
-                //!bug
-                string orderDetails = $"{selectedOrder.OrderID}\nDate: {selectedOrder.Date}\nOrder: {selectedOrder.Orders.ToString()}\nQuantity: {5}\nPrice: {selectedOrder.TotalPrice}";
-                Font font = new Font("Arial", 7);
-                SizeF textSize = graphics.MeasureString(orderDetails, font);
-                float textX = startX;
-                float textY = startY;
-                graphics.DrawString(orderDetails, font, Brushes.Black, textX, textY);
+                const float pH = 30; 
+                const float pW = 50;
+
+                float fsz = 7; //font size
+
+                Font mfont = new Font("Arial", fsz);
+
+                //render id
+                string orderID = selectedOrder.OrderID;
+                graphics.DrawString(orderID, mfont, Brushes.Black, sX, sY);
+
+                //render date
+                string Date = FormatTime(selectedOrder.Date,0) + " " + FormatTime(selectedOrder.Date, 1);
+                SizeF FontSize = graphics.MeasureString(Date, mfont);
+                graphics.DrawString(Date, mfont, Brushes.Black,pW - sX - FontSize.Width, sY);
+                sY += (float)FontSize.Height + 1;
+
+                //render order
+                bool check_num = selectedOrder.Orders.Length + selectedOrder.Notes.Length > 4;
+                for (int i = 0; i < selectedOrder.Orders.Length; i++)
+                {
+
+                    if (check_num)
+                    {
+                        mfont = new Font("Arial", 5);
+                    }
+
+                    string orderName = selectedOrder.Orders[i].Split('X')[0];
+                    SizeF orderNameSize = graphics.MeasureString(orderName, mfont);
+                    float num = sX + orderNameSize.Width;
+                    float posX =  pW - sX - 3;
+                    if (num > posX)
+                    {
+                        List<string> lines = new List<string>();
+                        StringBuilder currentLine = new StringBuilder();
+                        foreach (char c in orderName)
+                        {
+                            currentLine.Append(c);
+                            SizeF currentLineSize = graphics.MeasureString(currentLine.ToString(), mfont);
+                            if (sX + currentLineSize.Width > posX)
+                            {
+                                lines.Add(currentLine.ToString(0, currentLine.Length - 1));
+                                currentLine.Clear();
+                                currentLine.Append(c);
+                            }
+                        }
+                        if (currentLine.Length > 0)
+                        {
+                            lines.Add(currentLine.ToString());
+                        }
+
+                        float currentY = sY;
+                        foreach (string line in lines)
+                        {
+                            graphics.DrawString(line, mfont, Brushes.Black, sX, currentY);
+                            currentY += check_num ? 1.7f : (float)FontSize.Height;
+                        }
+                        graphics.DrawString(selectedOrder.Orders[i].Split('X')[1], mfont, Brushes.Black, posX, sY);
+                        sY += (check_num ? 1.7f : (float)FontSize.Height) * lines.Count;
+
+                    }
+                    else
+                    {
+                        graphics.DrawString(selectedOrder.Orders[i].Split('X')[0], mfont, Brushes.Black, sX, sY);
+                        graphics.DrawString(selectedOrder.Orders[i].Split('X')[1], mfont, Brushes.Black, posX, sY);
+                        sY += check_num ? 1.7f : (float)FontSize.Height;
+                    }
+                }
+
+                //render notes
+                string[] notes = selectedOrder.Notes;
+                if(notes.Length > 0)
+                {
+                    graphics.DrawString("- note: ", mfont, Brushes.Black, sX, sY);
+                    sY += check_num ? 1.7f : (float)FontSize.Height;
+                }
+                   
+
+                for (int i = 0; i < selectedOrder.Notes.Length; i++)
+                {
+
+                    if (check_num)
+                        mfont = new Font("Arial", 5);
+
+                    string orderName = selectedOrder.Orders[i].Split('X')[0];
+                    SizeF orderNameSize = graphics.MeasureString(orderName, mfont);
+                    float num = sX + orderNameSize.Width;
+                    float posX = pW  - 13;
+                    if (num > posX)
+                    {
+                        List<string> lines = new List<string>();
+                        StringBuilder currentLine = new StringBuilder();
+                        foreach (char c in orderName)
+                        {
+                            currentLine.Append(c);
+                            SizeF currentLineSize = graphics.MeasureString(currentLine.ToString(), mfont);
+                            if (sX + currentLineSize.Width > posX)
+                            {
+                                lines.Add(currentLine.ToString(0, currentLine.Length - 1));
+                                currentLine.Clear();
+                                currentLine.Append(c);
+                            }
+                        }
+                        if (currentLine.Length > 0)
+                        {
+                            lines.Add(currentLine.ToString());
+                        }
+
+                        float currentY = sY;
+                        foreach (string line in lines)
+                        {
+                            graphics.DrawString(line, mfont, Brushes.Black, sX+ 3, sY);
+                            sY += check_num ? 1.7f : (float)FontSize.Height;
+                        }
+
+                    }
+                    else
+                    {
+                        graphics.DrawString(selectedOrder.Notes[i], mfont, Brushes.Black, sX+5, sY);
+                        sY += check_num ? 1.7f : (float)FontSize.Height;
+                    }
+                }
+
+
+
 
                 // Generate and print QR code
-                string qrData = orderDetails;
+                string qrData = $"{orderID} {Date}";
+
                 QRCodeGenerator qrGenerator = new QRCodeGenerator();
                 QRCodeData qrCodeData = qrGenerator.CreateQrCode(qrData, QRCodeGenerator.ECCLevel.Q);
                 QRCode qrCode = new QRCode(qrCodeData);
                 Bitmap qrCodeImage = qrCode.GetGraphic(20);
-                float qrCodeSize = 100 * 0.1f; // QR code size relative to page size
-                float qrCodeX = 35f;
-                float qrCodeY = textSize.Height +2f; // Position below the text with some margin
+                float qrCodeSize = 100 * 0.1f;
+                float qrCodeX = pW - qrCodeSize - 2f;
+                float qrCodeY = pH - qrCodeSize;
 
                 graphics.DrawImage(qrCodeImage, qrCodeX, qrCodeY, qrCodeSize, qrCodeSize);
+
                 return;
             }
 
             if(sz.Contains("57x38mm"))
             {
                 Graphics graphics = e.Graphics;
-                graphics.PageUnit = GraphicsUnit.Millimeter; // Set unit to millimeter
+                graphics.PageUnit = GraphicsUnit.Millimeter; 
 
-                float startX = 5f;   // Starting X position
-                float startY = 5f;   // Starting Y position
+                float startX = 5f;   
+                float startY = 5f;   
 
                 // Print order details
                 //!bug
@@ -397,9 +517,7 @@ namespace PrintLabelThermal
         }
         private void UpdatePrintOrderPage(Order order)
         {
-            // Store the selected order in a field to be used in PrintOrderPage
             selectedOrder = order;
-            // Optionally, update the preview control if necessary
             printPreviewControl.InvalidatePreview();
         }
         private List<T> LoadDataFromJson<T>(string filePath)
@@ -416,14 +534,12 @@ namespace PrintLabelThermal
             if (DateTime.TryParse(timeString, out parsedDateTime))
             {
                 if(type == 0)
-                // Định dạng lại thời gian theo định dạng mong muốn, ví dụ: "dd-MM-yyyy HH:mm:ss"
                     return parsedDateTime.ToString("dd/MM");
                 if (type == 1)
                     return parsedDateTime.ToString("HH:mm");
             }
-            return timeString; // Nếu không thể phân tích thời gian, trả về chuỗi gốc
+            return timeString;
         }
-
         #endregion
 
   

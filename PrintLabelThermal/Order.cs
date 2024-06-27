@@ -13,7 +13,8 @@ namespace PrintLabelThermal
         public string Date { get; set; }
         [JsonConverter(typeof(StringArrayConvert))]
         public string[] Orders { get; set; }
-        public string Note { get; set; }
+        [JsonConverter(typeof(StringArrayConvert))]
+        public string[] Notes { get; set; }
         public string TotalPrice { get; set; }
 
    
